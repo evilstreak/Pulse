@@ -1,0 +1,5 @@
+## Interface: 40300
+## Title: Pulse
+## Version: 0.1a
+## Notes: Track the amount of damage you've taken in the previous 5 seconds for timing your death strikes.
+Pulse.lua
