@@ -18,6 +18,10 @@ Pulse.OnAddonLoaded = function( self, name )
   PulseFrame:SetScript( "OnUpdate", Pulse.OnUpdate );
 
   Pulse.CreateTicker()
+
+  -- cache the maximum life of the player
+  -- TODO find a way to get the base life, without buffs
+  Pulse.playerLife = UnitHealthMax( "unit" )
 end
 
 Pulse.OnUnitCombat = function( self, unitID, action, descriptor, damage, damageType )
@@ -98,21 +102,18 @@ Pulse.CreateTicker = function()
 end
 
 Pulse.UpdateTicker = function()
-  -- TODO find a way to get this from the game
-  local baseLife = 10785
-
   -- update the total amount lost
   local total = 0
   for _, v in ipairs( Pulse.History ) do
     total = total + v
   end
-  total = math.floor( total / baseLife * 100 )
+  total = math.floor( total / Pulse.playerLife * 100 )
   Pulse.Ticker.Total:SetText( total )
 
   -- update each tick
   for i, v in ipairs( Pulse.History ) do
     local t = Pulse.Ticker.Ticks[ i ]
-    local x = math.floor( v / baseLife * 100 )
+    local x = math.floor( v / Pulse.playerLife * 100 )
 
     -- if we're at less than 1% but do have actual data, show a sliver
     if x == 0 and v > 0 then
