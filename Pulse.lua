@@ -70,7 +70,7 @@ Pulse.CreateTicker = function()
     t:SetSize( 8, 4 )
 
     t:ClearAllPoints()
-    t:SetPoint( "BOTTOMLEFT", f, "BOTTOMLEFT", i * 8, 1 )
+    t:SetPoint( "BOTTOMRIGHT", f, "BOTTOMLEFT", i * 8, 1 )
 
     table.insert( f.Ticks, t )
   end
@@ -117,9 +117,9 @@ Pulse.UpdateTicker = function()
     -- if we're at less than 1% but do have actual data, show a sliver
     if x == 0 and v > 0 then
       x = 1
-      -- t:SetAlpha( 0.35 )
+      t:SetAlpha( 0.35 )
     else
-      -- t:SetAlpha( 1 )
+      t:SetAlpha( 1 )
     end
 
     t:SetHeight( x * 4 )
