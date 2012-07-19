@@ -85,7 +85,7 @@ Pulse.CreateTicker = function()
   -- set a line under the ticks
   local t = f:CreateTexture( nil, "ARTWORK" )
   t:SetTexture( 1, 1, 1, 0.35 )
-  t:ClearAllPoints();
+  t:ClearAllPoints()
   t:SetWidth( #Pulse.History * 8 - 1 )
   t:SetHeight( 1 )
   t:SetPoint( "BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0 )
