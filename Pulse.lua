@@ -17,6 +17,7 @@ Pulse.OnAddonLoaded = function( self, name )
   PulseFrame:RegisterEvent( "PLAYER_REGEN_ENABLED" )
   PulseFrame:RegisterEvent( "ZONE_CHANGED_NEW_AREA" )
   PulseFrame:RegisterEvent( "PLAYER_EQUIPMENT_CHANGED" )
+  PulseFrame:RegisterEvent( "UNIT_AURA" )
   PulseFrame:SetScript( "OnUpdate", Pulse.OnUpdate );
 
   Pulse.CreateTicker()
@@ -43,6 +44,8 @@ Pulse.OnEvent = function( self, event, ... )
     Pulse.OnPlayerRegenEnabled( self, ... )
   elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_EQUIPMENT_CHANGED" then
     Pulse.CachePlayerHealth()
+  elseif event == "UNIT_AURA" then
+    Pulse.OnUnitAura( self, ... )
   end
 end
 
@@ -95,6 +98,20 @@ Pulse.CreateTicker = function()
   f.Total:SetJustifyH( "CENTER" )
   f.Total:SetJustifyV( "BOTTOM" )
   f.Total:SetPoint( "BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, 0 )
+
+  -- create a stack to show the active blood shield
+  f.BloodShield = f:CreateTexture( nil, "ARTWORK" )
+  f.BloodShield:SetTexture( "Interface\\AddOns\\Pulse\\tick.tga", true )
+  f.BloodShield:SetVertexColor( 1, 1, 0 )
+
+  f.BloodShield:SetHorizTile( true )
+  f.BloodShield:SetVertTile( true )
+
+  f.BloodShield:SetSize( 8, 4 )
+  f.BloodShield:ClearAllPoints()
+  f.BloodShield:SetPoint( "BOTTOMRIGHT", f, "BOTTOMLEFT", 0, 1 )
+  f.BloodShield:Hide()
+
 
   f:ClearAllPoints()
   f:SetPoint( "BOTTOM", 0, 130 )
@@ -152,6 +169,36 @@ end
 Pulse.CachePlayerHealth = function()
   -- TODO find a way to get the base life, without buffs
   Pulse.playerLife = UnitHealthMax( "player" )
+end
+
+Pulse.OnUnitAura = function( self, unit )
+  -- bail if this aura isn't on the player
+  if unit ~= "player" then return end
+
+  local bloodShieldPresent = false
+
+  for i = 1, 40 do
+    name, _, _, _, _, _, _, _, _, _, id, _, _, value, _, _ = UnitAura( "player", i )
+
+    -- check it's Blood Shield
+    if id == 77535 then
+      bloodShieldPresent = true
+
+      local size = math.floor( value / Pulse.playerLife * 100 )
+      -- update the height of the blood shield bar
+      Pulse.Ticker.BloodShield:SetHeight( size * 4 )
+
+      if size == 0 then
+        Pulse.Ticker.BloodShield:Hide()
+      else
+        Pulse.Ticker.BloodShield:Show()
+      end
+    end
+  end
+
+  if not bloodShieldPresent then
+    Pulse.Ticker.BloodShield:Hide()
+  end
 end
 
 -- create the frame and set up the first event handler
