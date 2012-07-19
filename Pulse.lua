@@ -15,13 +15,14 @@ Pulse.OnAddonLoaded = function( self, name )
   PulseFrame:RegisterEvent( "UNIT_COMBAT" )
   PulseFrame:RegisterEvent( "PLAYER_REGEN_DISABLED" )
   PulseFrame:RegisterEvent( "PLAYER_REGEN_ENABLED" )
+  PulseFrame:RegisterEvent( "ZONE_CHANGED_NEW_AREA" )
+  PulseFrame:RegisterEvent( "PLAYER_EQUIPMENT_CHANGED" )
   PulseFrame:SetScript( "OnUpdate", Pulse.OnUpdate );
 
   Pulse.CreateTicker()
 
-  -- cache the maximum life of the player
-  -- TODO find a way to get the base life, without buffs
-  Pulse.playerLife = UnitHealthMax( "unit" )
+  -- Set a value for health so we don't try calculations against nil
+  Pulse.playerLife = 1
 end
 
 Pulse.OnUnitCombat = function( self, unitID, action, descriptor, damage, damageType )
@@ -40,6 +41,8 @@ Pulse.OnEvent = function( self, event, ... )
     Pulse.OnPlayerRegenDisabled( self, ... )
   elseif event == "PLAYER_REGEN_ENABLED" then
     Pulse.OnPlayerRegenEnabled( self, ... )
+  elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_EQUIPMENT_CHANGED" then
+    Pulse.CachePlayerHealth()
   end
 end
 
@@ -59,7 +62,7 @@ Pulse.CreateTicker = function()
   local f = CreateFrame( "FRAME", nil, UIParent )
 
   f:SetFrameStrata( "BACKGROUND" )
-  f:SetWidth( 8 * #Pulse.History + 64 )
+  f:SetWidth( 8 * #Pulse.History + 30 )
   f:SetHeight( 128 )
 
   -- create a texture for each tick
@@ -88,13 +91,13 @@ Pulse.CreateTicker = function()
   t:SetPoint( "BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0 )
 
   f.Total = f:CreateFontString( nil, "OVERLAY", "GameFontNormal" )
-  f.Total:SetSize( 64, 64 )
+  f.Total:SetSize( 30, 30 )
   f.Total:SetJustifyH( "CENTER" )
   f.Total:SetJustifyV( "BOTTOM" )
   f.Total:SetPoint( "BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, 0 )
 
   f:ClearAllPoints()
-  f:SetPoint( "BOTTOM", 0, 128 )
+  f:SetPoint( "BOTTOM", 0, 130 )
 
   f:Hide()
 
@@ -115,7 +118,7 @@ Pulse.UpdateTicker = function()
     local t = Pulse.Ticker.Ticks[ i ]
     local x = math.floor( v / Pulse.playerLife * 100 )
 
-    -- if we're at less than 1% but do have actual data, show a sliver
+    -- if we're at less than 1% but do have actual data, show a faded block
     if x == 0 and v > 0 then
       x = 1
       t:SetAlpha( 0.35 )
@@ -138,6 +141,12 @@ end
 
 Pulse.OnPlayerRegenEnabled = function()
   Pulse.Ticker:Hide();
+end
+
+-- cache the maximum life of the player
+Pulse.CachePlayerHealth = function()
+  -- TODO find a way to get the base life, without buffs
+  Pulse.playerLife = UnitHealthMax( "player" )
 end
 
 -- create the frame and set up the first event handler
