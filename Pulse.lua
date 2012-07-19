@@ -136,6 +136,11 @@ Pulse.UpdateTicker = function()
 end
 
 Pulse.OnPlayerRegenDisabled = function()
+  -- if we're entering combat and still haven't fetched health, do it now
+  if Pulse.playerLife == 1 then
+    Pulse.CachePlayerHealth()
+  end
+
   Pulse.Ticker:Show();
 end
 
