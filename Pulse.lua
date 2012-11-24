@@ -8,7 +8,7 @@ Pulse.OnAddonLoaded = function( self, name )
   Pulse.timer = 0
   Pulse.History = {}
   for i = 1, 25 do
-    table.insert( Pulse.History, 0 )
+    table.insert( Pulse.History, { 0, 0 } )
   end
 
   -- set up all other event handlers
@@ -29,7 +29,10 @@ end
 Pulse.OnUnitCombat = function( self, unitID, action, descriptor, damage, damageType )
   -- we only want to track damage to the player
   if unitID == 'player' and action ~= 'HEAL' then
-    Pulse.History[ #Pulse.History ] = Pulse.History[ #Pulse.History ] + damage
+    local i = 1
+    if damageType ~= 1 then i = 2 end
+
+    Pulse.History[ #Pulse.History ][ i ] = Pulse.History[ #Pulse.History ][ i ] + damage
   end
 end
 
@@ -53,7 +56,7 @@ Pulse.OnUpdate = function( self, elapsed )
   Pulse.timer = Pulse.timer + elapsed
   if Pulse.timer >= 0.2 then
     -- move our history on one block
-    table.insert( Pulse.History, 0 )
+    table.insert( Pulse.History, { 0, 0 } )
     table.remove( Pulse.History, 1 )
     Pulse.timer = Pulse.timer - 0.2
 
@@ -71,18 +74,32 @@ Pulse.CreateTicker = function()
   -- create a texture for each tick
   f.Ticks = {}
   for i, _ in ipairs( Pulse.History ) do
-    local t = f:CreateTexture( nil, "ARTWORK" )
-    t:SetTexture( "Interface\\AddOns\\Pulse\\tick.tga", true )
+    -- first we need a texture to show physical damage
+    local p = f:CreateTexture( nil, "ARTWORK" )
+    p:SetTexture( "Interface\\AddOns\\Pulse\\tick.tga", true )
 
-    t:SetHorizTile( true )
-    t:SetVertTile( true )
+    p:SetHorizTile( true )
+    p:SetVertTile( true )
 
-    t:SetSize( 8, 4 )
+    p:SetSize( 8, 4 )
 
-    t:ClearAllPoints()
-    t:SetPoint( "BOTTOMRIGHT", f, "BOTTOMLEFT", i * 8, 1 )
+    p:ClearAllPoints()
+    p:SetPoint( "BOTTOMRIGHT", f, "BOTTOMLEFT", i * 8, 1 )
 
-    table.insert( f.Ticks, t )
+    -- second we need a texture to show magical damage
+    local m = f:CreateTexture( nil, "ARTWORK" )
+    m:SetTexture( "Interface\\AddOns\\Pulse\\tick.tga", true )
+    m:SetVertexColor( 0.5, 0.75, 1 )
+
+    m:SetHorizTile( true )
+    m:SetVertTile( true )
+
+    m:SetSize( 8, 4 )
+
+    m:ClearAllPoints()
+    m:SetPoint( "BOTTOMLEFT", p, "TOPLEFT", 0, 0 )
+
+    table.insert( f.Ticks, { p, m } )
   end
 
   -- set a line under the ticks
@@ -116,7 +133,7 @@ Pulse.CreateTicker = function()
   f:ClearAllPoints()
   f:SetPoint( "BOTTOM", 0, 130 )
 
-  f:Hide()
+  f:SetAlpha( 0 )
 
   Pulse.Ticker = f
 end
@@ -125,29 +142,44 @@ Pulse.UpdateTicker = function()
   -- update the total amount lost
   local total = 0
   for _, v in ipairs( Pulse.History ) do
-    total = total + v
+    total = total + v[ 1 ] + v[ 2 ]
   end
   total = math.floor( total / Pulse.playerLife * 100 )
   Pulse.Ticker.Total:SetText( total )
 
   -- update each tick
   for i, v in ipairs( Pulse.History ) do
-    local t = Pulse.Ticker.Ticks[ i ]
-    local x = math.floor( v / Pulse.playerLife * 100 )
+    for j = 1, 2 do
+      local t = Pulse.Ticker.Ticks[ i ][ j ]
+      local x = math.floor( v[ j ] / Pulse.playerLife * 100 )
 
-    -- if we're at less than 1% but do have actual data, show a faded block
-    if x == 0 and v > 0 then
-      x = 1
-      t:SetAlpha( 0.35 )
-    else
-      t:SetAlpha( 1 )
-    end
+      -- if we're at less than 1% but do have actual data, show a faded block
+      if x == 0 and v[ j ] > 0 then
+        x = 1
+        t:SetAlpha( 0.35 )
+      else
+        t:SetAlpha( 1 )
+      end
 
-    t:SetHeight( x * 4 )
-    if x == 0 then
-      t:Hide()
-    else
-      t:Show()
+      t:SetHeight( x * 4 )
+      if x == 0 then
+        t:Hide()
+      else
+        t:Show()
+      end
+
+      -- reanchor the magical damage bar to deal with 0 physical damage
+      if j == 2 then
+        local p = Pulse.Ticker.Ticks[ i ][ 1 ]
+        t:ClearAllPoints()
+
+        if v[ j - 1 ] == 0 then
+          local point, relativeTo, relativePoint, xOffset, yOffset = p:GetPoint(index)
+          t:SetPoint( point, relativeTo, relativePoint, xOffset, yOffset )
+        else
+          t:SetPoint( "BOTTOMLEFT", Pulse.Ticker.Ticks[ i ][ j - 1 ], "TOPLEFT", 0, 0 )
+        end
+      end
     end
   end
 end
@@ -158,11 +190,12 @@ Pulse.OnPlayerRegenDisabled = function()
     Pulse.CachePlayerHealth()
   end
 
-  Pulse.Ticker:Show();
+  Pulse.Ticker:SetAlpha( 1 )
 end
 
 Pulse.OnPlayerRegenEnabled = function()
-  Pulse.Ticker:Hide();
+  -- UIFrameFadeOut( Pulse.Ticker, 5, 1, 0 )
+  Pulse.Ticker:SetAlpha( 0 )
 end
 
 -- cache the maximum life of the player
