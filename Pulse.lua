@@ -211,7 +211,7 @@ Pulse.OnUnitAura = function( self, unit )
   local bloodShieldPresent = false
 
   for i = 1, 40 do
-    name, _, _, _, _, _, _, _, _, _, id, _, _, value, _, _ = UnitAura( "player", i )
+    name, _, _, _, _, _, _, _, _, _, id, _, _, _, value, _, _ = UnitAura( "player", i )
 
     -- check it's Blood Shield
     if id == 77535 then
